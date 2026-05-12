@@ -1,0 +1,13 @@
+kagglehub
+pytorch
+dotenv
+psycopg2-binary
+fastapi
+pandas
+wandb
+numpy
+opencv-python
+
+link kaggle : https://www.kaggle.com/datasets/gabrielalbertin/clothing-dataset
+
+
