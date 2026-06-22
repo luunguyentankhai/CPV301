@@ -4,3 +4,6 @@
 .git
 logs
 venv
+roadmap.*
+.env
+data/*
