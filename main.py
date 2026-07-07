@@ -69,9 +69,8 @@ def detect_and_draw(roi_frame, model, y_stop):
                 if is_violating:
                     color = (0, 0, 255) # Đỏ - Vi phạm
                     label = f"VIOLATION: {class_name}"
-                    
-                cv2.rectangle(roi_frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(roi_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    cv2.rectangle(roi_frame, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(roi_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     
     return roi_frame
 
