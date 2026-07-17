@@ -144,7 +144,7 @@ def main():
     print(f"Total images in final merged dataset: {old_total_after}")
     print("--------------------------------------------------")
     print(
-        f"Final Dataset Composition -> Custom : Roboflow = {old_total_before} : {total_copied_images}"
+        f"Final Dataset Composition to Custom : Roboflow = {old_total_before} : {total_copied_images}"
     )
 
 
