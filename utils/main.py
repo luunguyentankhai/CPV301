@@ -20,8 +20,9 @@ def get_stop_line(roi_frame):
     
     y_stop = None
     if lines is not None:
+        lines = lines.reshape(-1, 4)
         for line in lines:
-            x1, y1, x2, y2 = line[0]
+            x1, y1, x2, y2 = line
             if abs(y2 - y1) < 15: 
                 cv2.line(roi_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                 y_stop = (y1 + y2) // 2
@@ -29,9 +30,9 @@ def get_stop_line(roi_frame):
                 
     return y_stop
 
-def detect_and_draw(roi_frame, model, y_stop):
+def detect_and_draw(roi_frame, model, y_stop, tracked_vehicles):
     
-    results = model(roi_frame)
+    results = model.track(roi_frame, persist=True, verbose=False)
     boxes = results[0].boxes
     class_names = model.names
     
@@ -54,22 +55,38 @@ def detect_and_draw(roi_frame, model, y_stop):
         for box in boxes:
             cls_id = int(box.cls[0])
             class_name = class_names[cls_id]
+            track_id = int(box.id[0]) if box.id is not None else None
             
-            if class_name in ['car', 'motorbike']:
+            if class_name in ['car', 'motorbike'] and track_id is not None:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 
-                is_violating = False
+                # Cập nhật trạng thái tracker cho xe mới
+                if track_id not in tracked_vehicles:
+                    # Nếu xe đang ở phía trên vạch (y1 <= y_stop)
+                    if y1 <= y_stop:
+                        tracked_vehicles[track_id] = 'tracking'
+                    else:
+                        # Xe đã ở dưới vạch từ trước -> bỏ qua không track
+                        tracked_vehicles[track_id] = 'ignore'
+                        
+                if tracked_vehicles[track_id] == 'ignore':
+                    continue
                 
-                # Xe đè vạch khi đèn đỏ
-                if red_light_on and (y1 <= y_stop <= y2):
-                    is_violating = True
-                    
-                if is_violating:
+                # Xe đi qua hết vạch dừng, không tính người nên cộng thêm 1 đoạn
+                if (y1 + (y2 - y1)//2) > y_stop:
+                    if tracked_vehicles[track_id] == 'tracking':
+                        if red_light_on:
+                            tracked_vehicles[track_id] = 'violating'
+                        else:
+                            tracked_vehicles[track_id] = 'passed'
+                            
+                # Vẽ Box tùy theo trạng thái
+                if tracked_vehicles[track_id] == 'violating':
                     color = (0, 0, 255) # Đỏ - Vi phạm
                     label = f"VIOLATION: {class_name}"
                     cv2.rectangle(roi_frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(roi_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                    
+
     return roi_frame
 
 def main():
@@ -101,6 +118,7 @@ def main():
     out = cv2.VideoWriter(args.output, fourcc, fps, (width, height))
     
     y_stop = None
+    tracked_vehicles = {} # Dictionary để lưu trạng thái của từng xe
     
     print("Processing video... Please wait.")
     
@@ -117,7 +135,7 @@ def main():
             if y_stop is not None:
                 print(f"Stop line detected at Y coordinate (in ROI) = {y_stop}")
                 
-        processed_roi = detect_and_draw(roi_frame, model, y_stop)
+        processed_roi = detect_and_draw(roi_frame, model, y_stop, tracked_vehicles)
         
         # Ghi frame đã xử lý vào file video
         out.write(processed_roi)
